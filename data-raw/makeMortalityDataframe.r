@@ -187,8 +187,19 @@ mortality <- bind_rows(gam1971, rp2k) %>%
   arrange(tablename, tid, series, memtype, collar, sex, year, age)
 
 glimpse(mortality)
+
 count(mortality, tablename, tid, series, memtype, collar, sex, year)
+
 mortality %>% select(tablename, age, qx.m) %>% spread(tablename, qx.m) %>% data.frame
+
+qplot(age, qx.m, data=mortality, colour=tablename, geom=c("point", "line"))
+
+mortality %>% filter(age>=20) %>%
+  group_by(tablename) %>%
+  mutate(cqx=cumprod(1-qx.m)) %>%
+  ungroup %>%
+  qplot(age, cqx, data=., colour=tablename, geom=c("point", "line"))
+
 
 use_data(mortality, overwrite=TRUE)
 
