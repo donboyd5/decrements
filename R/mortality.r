@@ -7,7 +7,7 @@
 #' \describe{
 #' \item{tablename}{Unique name identifying the mortality table, character}
 #' \item{series}{Level of government: 1, 2, or 3, for State-local, State, or local, numeric}
-#' \item{usage}{Purpose of the table: c("employee", "annuitant", "hybrid")}
+#' \item{memtype}{Purpose of the table: c("employee", "annuitant", "disabled", "hybrid")}
 #' \item{sex}{Male or female, c("male", "female", "unisex", "female75"), character}
 #'       Where female75 is 75% female, 25% male
 #' \item{age}{Attained age, integer}

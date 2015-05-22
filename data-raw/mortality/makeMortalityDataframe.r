@@ -15,6 +15,43 @@
 #   sex, character: male, female, unisex, female75
 
 
+# packages I always want loaded
+library(plyr) # always load BEFORE loading dplyr
+library(dplyr)
+options(dplyr.print_min = 60) # default is 10
+options(dplyr.print_max = 60) # default is 20
+library(foreign) # various import and export routines - e.g., for reading Stata files
+library(gdata) # for reading spreadsheets
+library(knitr)
+library(lubridate)
+library(ggplot2)
+library(magrittr)
+library(readr)
+library(readxl)
+library(stringr)
+library(tidyr)
+
+library(xlsx)
+
+library(devtools)
+
+
+# load my packages last
+# devtools::install_github("donboyd5/apitools")
+# devtools::install_github("donboyd5/bdata")
+# devtools::install_github("donboyd5/btools")
+# devtools::install_github("donboyd5/pdata")
+library(apitools)
+library(bdata)
+library(btools)
+# library(pdata)
+
+draw <- "./data-raw/"
+dmort <- paste0(draw, "mortality/")
+
+
+
+
 #****************************************************************************************************
 #
 #                    Mortality tables from the Society of Actuaries    ####
@@ -38,7 +75,7 @@
 
 
 
-# make a list of tables we want
+# make a list of SOA tables that we want
 tlist.s <- "tid, series, sex, memtype, collar, year
 1594, rp2000, male, employee, allcollars, 2000
 1595, rp2000, male, annuitant, allcollars, 2000
@@ -56,12 +93,12 @@ tlist
 for(tbl in tlist$tid) {
   url <- paste0("http://mort.soa.org/Export.aspx?Type=xlsx&TableIdentity=", tbl)
   tmp <- filter(tlist, tid==tbl)
-  download.file(url, paste0(ddir, tmp$fname), mode="wb")
+  download.file(url, paste0(dmort, tmp$fname), mode="wb")
 }
 
 # now make a big data frame
 gettab <- function(fname) {
-  df <- read.xlsx(paste0(ddir, fname), sheetIndex = 1)
+  df <- read.xlsx(paste0(dmort, fname), sheetIndex = 1)
   names(df)[1:2] <- c("age", "value")
   df2 <- df %>% mutate_each(funs(cton)) %>%
     select(age, value) %>%
@@ -73,6 +110,9 @@ gettab <- function(fname) {
 
 dfall <- tlist %>% group_by(tid, series, sex, memtype, collar, year) %>%
   do(gettab(.$fname))
+
+mortality <- dfall
+use_data(mortality, overwrite=TRUE)
 
 # combine 1594, 1595, 1597, 1598 into a hybrid rp2000 table
 # first combine annuitants / employees within sex
