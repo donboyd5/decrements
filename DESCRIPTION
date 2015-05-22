@@ -1,0 +1,12 @@
+Package: decrements
+Type: Package
+Title: Decrement Tables (Data) for Public Pension Plan Analysis
+Version: 0.1
+Date: 2015-05-22
+Authors@R: person("Boyd", "Don", email = "donboyd5@gmail.com",
+  role = c("aut", "cre"))
+Description: Decrement tables gathered from public sources.
+Suggests:
+    dplyr
+License: GPL-2
+LazyData: TRUE
