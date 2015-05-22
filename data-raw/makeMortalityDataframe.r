@@ -151,6 +151,42 @@ rp2k <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
   select(-male, -female)
 rp2k %>% data.frame
 
+rp2k.f75 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
+  ungroup %>%
+  select(year, sex, age, memtype, value) %>%
+  # average annuitant and employee member types
+  spread(memtype, value) %>%
+  mutate(value=ifelse(is.na(annuitant), employee, ifelse(is.na(employee), annuitant, (employee + annuitant) / 2))) %>%
+  # now average male and female
+  select(year, sex, age, value) %>%
+  spread(sex, value) %>%
+  mutate(tablename="rp2000.hybrid.f75",
+         series="rp2000",
+         memtype="hybrid",
+         collar="allcollars",
+         sex="female75",
+         qx.m=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.25 + female*.75))) %>%
+  select(-male, -female)
+rp2k.f75 %>% data.frame
+
+
+rp2k.f90 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
+  ungroup %>%
+  select(year, sex, age, memtype, value) %>%
+  # average annuitant and employee member types
+  spread(memtype, value) %>%
+  mutate(value=ifelse(is.na(annuitant), employee, ifelse(is.na(employee), annuitant, (employee + annuitant) / 2))) %>%
+  # now average male and female
+  select(year, sex, age, value) %>%
+  spread(sex, value) %>%
+  mutate(tablename="rp2000.hybrid.f90",
+         series="rp2000",
+         memtype="hybrid",
+         collar="allcollars",
+         sex="female90",
+         qx.m=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.10 + female*.90))) %>%
+  select(-male, -female)
+rp2k.f90 %>% data.frame
 
 # get gam1971
 gam1971base <- dfall %>% filter(tid %in% 818, !is.na(age)) %>%
@@ -182,7 +218,7 @@ gam1971 <- bind_rows(gam1971base, gam1971addon)
 
 glimpse(gam1971)
 glimpse(rp2k)
-mortality <- bind_rows(gam1971, rp2k) %>%
+mortality <- bind_rows(gam1971, rp2k, rp2k.f75, rp2k.f90) %>%
   select(tablename, tid, series, memtype, collar, sex, year, age, qx.m) %>%
   arrange(tablename, tid, series, memtype, collar, sex, year, age)
 
@@ -192,7 +228,7 @@ count(mortality, tablename, tid, series, memtype, collar, sex, year)
 
 mortality %>% select(tablename, age, qx.m) %>% spread(tablename, qx.m) %>% data.frame
 
-qplot(age, qx.m, data=mortality, colour=tablename, geom=c("point", "line"))
+qplot(age, qx.m, data=filter(mortality, tablename!="gam1971.hybrid"), colour=tablename, geom=c("point", "line"))
 
 mortality %>% filter(age>=20) %>%
   group_by(tablename) %>%
