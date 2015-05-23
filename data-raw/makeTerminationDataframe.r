@@ -51,6 +51,49 @@ twvl <- twv %>% gather(ea, qx.t, -agex) %>%
   filter(!is.na(qx.t)) %>%
   select(tablename, age, ea, qx.t)
 
+#****************************************************************************************************
+#                    Read Winklevoss term rates - Yimeng  ####
+#****************************************************************************************************
+library(xlsx)
+
+# data table 2-3 termination rates ####
+
+term <- read.xlsx(paste0(draw, wvfn), sheetName = "Tab2-3TermRates", colClasses = "character", startRow = 3, stringsAsFactors = FALSE)
+vnames <- c("age", paste0("ea", seq(20, 60, 5)))
+names(term)[1:length(vnames)] <- vnames
+term <- term[, vnames]
+term <- term %>% mutate_each(funs(cton)) %>%
+  filter(!is.na(age))
+# term contain the original termination table in winkelvoss
+
+# Now we expand the termination rates to all entry ages, assuming the rates are the same within each 5-year interval
+
+# First, fill up all 0 cells
+term2 <- term
+term2[36:40, 2:7] <- term2[36:40, 8]
+term2[41:45, 2:8] <- term2[41:45, 9]
+
+# Then reorganize termination table into long format
+term2 %<>%
+  gather(ea, qxt.p, -age) %>%
+  mutate(ea = as.numeric(gsub("[^0-9]", "", ea)),
+         qxt.p=ifelse(is.na(qxt.p), 0, qxt.p))
+
+# Fill up termination rates for all missing entry ages.
+term3 <-  expand.grid(age = 20:64, ea = 20:64) %>%
+  mutate(ea.match = floor(ea*2/10)/2*10,
+         yos = age - ea) %>%
+  left_join(term2 %>% rename(ea.match = ea)) %>%
+  filter(yos >= 0) %>%
+  select(-ea.match)
+
+# check the result
+term3 %>% select(-yos) %>% spread(ea, qxt.p)
+
+term4 <- term3 %>% mutate(tablename="Winklevoss") %>%
+  select(tablename, age, ea, qxt.p) %>%
+  arrange(age, ea)
+
 
 #****************************************************************************************************
 #                    Read other term rates (TO COME) ####
@@ -61,6 +104,6 @@ twvl <- twv %>% gather(ea, qx.t, -agex) %>%
 #                    Combine tables and save to data frame ####
 #****************************************************************************************************
 
-termination <- twvl
+termination <- term4
 use_data(termination, overwrite=TRUE)
 
