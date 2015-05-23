@@ -4,20 +4,15 @@
 \name{termination}
 \alias{termination}
 \title{Termination decrement tables.}
-\format{\preformatted{Classes 'tbl_df', 'tbl' and 'data.frame':	225 obs. of  4 variables:
- $ age      : int  20 21 22 23 24 25 26 27 28 29 ...
- $ ea       : int  20 20 20 20 20 20 20 20 20 20 ...
- $ qx.t     : num  0.243 0.224 0.207 0.191 0.176 ...
- $ tablename: chr  "Winklevoss" "Winklevoss" "Winklevoss" "Winklevoss" ...
-}}
-\source{
-Winklevoss Table 2-3, plus other sources (TO COME)\cr
+\format{Data frame with 1 row per age per entry age per tablename.
 \describe{
 \item{tablename}{Unique name identifying the termination table - ordinarily will select on this, character}
 \item{age}{Attained age, integer}
 \item{ea}{Entry age, integer}
 \item{qx.t}{Rate of termination at age x and given entry age, numeric}
-}
+}}
+\source{
+Winklevoss Table 2-3, plus other sources (TO COME)\cr
 }
 \usage{
 termination

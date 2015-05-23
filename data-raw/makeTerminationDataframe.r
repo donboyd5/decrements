@@ -48,7 +48,8 @@ glimpse(twv)
 twvl <- twv %>% gather(ea, qx.t, -agex) %>%
   rename(age=agex) %>%
   mutate(age=as.integer(age), ea=as.integer(str_trim(as.character(ea))), tablename="Winklevoss") %>%
-  filter(!is.na(qx.t))
+  filter(!is.na(qx.t)) %>%
+  select(tablename, age, ea, qx.t)
 
 
 #****************************************************************************************************
