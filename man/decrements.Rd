@@ -8,5 +8,6 @@
 \description{
 Currently includes:\cr
 \code{\link{mortality}} Various mortality tables in a single data frame\cr
+\code{\link{termination}} Various termination tables in a single data frame\cr
 }
 

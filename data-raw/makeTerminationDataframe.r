@@ -1,7 +1,5 @@
 # 5/22/2015
 
-# TO COME:  Not yet started...
-
 # packages I always want loaded
 library(plyr) # always load BEFORE loading dplyr
 library(dplyr)
@@ -34,24 +32,34 @@ library(btools)
 # library(pdata)
 
 draw <- "./data-raw/"
-dproj <- paste0(draw, "projection/")
+dterm <- paste0(draw, "termination/")
+
+wvfn <- "Winklevoss(6).xlsx"
 
 
 
 #****************************************************************************************************
-#                    RUN ONCE: Get projection scale tables tables from the Society of Actuaries    ####
-#                    Only repeat when getting new data
+#                    Read Winklevoss term rates  ####
+#****************************************************************************************************
+
+twv <- read_excel(paste0(draw, wvfn), sheet="Tab2-3TermRates", skip=2)
+glimpse(twv)
+
+twvl <- twv %>% gather(ea, qx.t, -agex) %>%
+  rename(age=agex) %>%
+  mutate(age=as.integer(age), ea=as.integer(str_trim(as.character(ea))), tablename="Winklevoss") %>%
+  filter(!is.na(qx.t))
+
+
+#****************************************************************************************************
+#                    Read other term rates (TO COME) ####
 #****************************************************************************************************
 
 
-# Projection scales:
-# 923 1994 Mortality Improvement Projection Scale AA - Female
-# 924 1994 Mortality Improvement Projection Scale AA - Male
-# 1511 Interim Mortality Improvement Scale BB - Male
-# 1512 Interim Mortality Improvement Scale BB - Female
+#****************************************************************************************************
+#                    Combine tables and save to data frame ####
+#****************************************************************************************************
 
-
-
-
-
+termination <- twvl
+use_data(termination, overwrite=TRUE)
 

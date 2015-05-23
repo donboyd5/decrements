@@ -4,7 +4,7 @@
 \name{mortality}
 \alias{mortality}
 \title{Mortality decrement tables.}
-\format{Data frame with 1 row per plan per year, with more than 200 variables. See ppdvars for documentation on variables.
+\format{Data frame with 1 row per age per tablename.
 \describe{
 \item{tablename}{Unique name identifying the mortality table - ordinarily will select on this, character}
 \item{tid}{SOA unique table number if this table is on the SOA site (rather than constructed), integer}
