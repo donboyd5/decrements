@@ -14,7 +14,7 @@
 #'       unisex is 50% male, 50% female
 #'       female75 is 75% female, 25% male
 #' \item{age}{Attained age, integer}
-#' \item{qx.m}{Rate of mortality at age x, numeric}
+#' \item{qxm}{Rate of mortality at age x, numeric}
 #' }
 #' @examples
 #' library(dplyr)

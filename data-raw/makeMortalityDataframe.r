@@ -31,18 +31,10 @@ library(readxl)
 library(stringr)
 library(tidyr)
 
-library(xlsx)
-
 library(devtools)
 
 
 # load my packages last
-# devtools::install_github("donboyd5/apitools")
-# devtools::install_github("donboyd5/bdata")
-# devtools::install_github("donboyd5/btools")
-# devtools::install_github("donboyd5/pdata")
-library(apitools)
-library(bdata)
 library(btools)
 # library(pdata)
 
@@ -94,7 +86,7 @@ for(tbl in tlist$tid) {
 # 818	1971 GAM - Male
 # 1971 Group Annuity Mortality (GAM) Table – Male. Minimum Age: 5 Maximum Age: 110
 # this is the Winkelvoss table
-download.file("http://mort.soa.org/Export.aspx?Type=xlsx&TableIdentity=818", paste0(dmort, "818_gam1971_male_hybrid_allcollars_1971.xlsx"), mode="wb")
+# download.file("http://mort.soa.org/Export.aspx?Type=xlsx&TableIdentity=818", paste0(dmort, "818_gam1971_male_hybrid_allcollars_1971.xlsx"), mode="wb")
 
 
 
@@ -147,7 +139,7 @@ rp2k <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
          memtype="hybrid",
          collar="allcollars",
          sex="unisex",
-         qx.m=ifelse(is.na(male), female, ifelse(is.na(female), male, (male + female) / 2))) %>%
+         qxm=ifelse(is.na(male), female, ifelse(is.na(female), male, (male + female) / 2))) %>%
   select(-male, -female)
 rp2k %>% data.frame
 
@@ -165,7 +157,7 @@ rp2k.f75 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>
          memtype="hybrid",
          collar="allcollars",
          sex="female75",
-         qx.m=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.25 + female*.75))) %>%
+         qxm=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.25 + female*.75))) %>%
   select(-male, -female)
 rp2k.f75 %>% data.frame
 
@@ -184,16 +176,16 @@ rp2k.f90 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>
          memtype="hybrid",
          collar="allcollars",
          sex="female90",
-         qx.m=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.10 + female*.90))) %>%
+         qxm=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.10 + female*.90))) %>%
   select(-male, -female)
 rp2k.f90 %>% data.frame
 
 # get gam1971
 gam1971base <- dfall %>% filter(tid %in% 818, !is.na(age)) %>%
   mutate(tablename="gam1971.hybrid") %>%
-  rename(qx.m=value)
-# add ages 110-120, with qx.m=1
-onerec <- gam1971base %>% filter(age==110) %>% mutate(qx.m=1) %>% select(-age)
+  rename(qxm=value)
+# add ages 110-120, with qxm=1
+onerec <- gam1971base %>% filter(age==110) %>% mutate(qxm=1) %>% select(-age)
 stackrecs <- function(x) return(onerec)
 gam1971addon <- data.frame(age=111:120) %>% group_by(age) %>% do(stackrecs(.$age))
 gam1971 <- bind_rows(gam1971base, gam1971addon)
@@ -213,26 +205,26 @@ gam1971 <- bind_rows(gam1971base, gam1971addon)
 #       unisex is 50% male, 50% female
 #       female75 is 75% female, 25% male
 # \item{age}{Attained age, integer}
-# \item{qx.m}{Rate of mortality at age x, numeric}
+# \item{qxm}{Rate of mortality at age x, numeric}
 
 
 glimpse(gam1971)
 glimpse(rp2k)
 mortality <- bind_rows(gam1971, rp2k, rp2k.f75, rp2k.f90) %>%
-  select(tablename, tid, series, memtype, collar, sex, year, age, qx.m) %>%
+  select(tablename, tid, series, memtype, collar, sex, year, age, qxm) %>%
   arrange(tablename, tid, series, memtype, collar, sex, year, age)
 
 glimpse(mortality)
 
 count(mortality, tablename, tid, series, memtype, collar, sex, year)
 
-mortality %>% select(tablename, age, qx.m) %>% spread(tablename, qx.m) %>% data.frame
+mortality %>% select(tablename, age, qxm) %>% spread(tablename, qxm) %>% data.frame
 
-qplot(age, qx.m, data=filter(mortality, tablename!="gam1971.hybrid"), colour=tablename, geom=c("point", "line"))
+qplot(age, qxm, data=filter(mortality, tablename!="gam1971.hybrid"), colour=tablename, geom=c("point", "line"))
 
 mortality %>% filter(age>=20) %>%
   group_by(tablename) %>%
-  mutate(cqx=cumprod(1-qx.m)) %>%
+  mutate(cqx=cumprod(1-qxm)) %>%
   ungroup %>%
   qplot(age, cqx, data=., colour=tablename, geom=c("point", "line"))
 

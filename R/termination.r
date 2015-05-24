@@ -8,7 +8,7 @@
 #' \item{tablename}{Unique name identifying the termination table - ordinarily will select on this, character}
 #' \item{age}{Attained age, integer}
 #' \item{ea}{Entry age, integer}
-#' \item{qx.t}{Rate of termination at age x and given entry age, numeric}
+#' \item{qxt}{Rate of termination at age x and given entry age, numeric}
 #' }
 #' @examples
 #' library(dplyr)
