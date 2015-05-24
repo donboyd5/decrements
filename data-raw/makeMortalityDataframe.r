@@ -208,6 +208,7 @@ gam1971 <- bind_rows(gam1971base, gam1971addon)
 # \item{qxm}{Rate of mortality at age x, numeric}
 
 
+
 glimpse(gam1971)
 glimpse(rp2k)
 mortality <- bind_rows(gam1971, rp2k, rp2k.f75, rp2k.f90) %>%
