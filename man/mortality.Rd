@@ -8,7 +8,6 @@
 \describe{
 \item{tablename}{Unique name identifying the mortality table - ordinarily will select on this, character}
 \item{tid}{SOA unique table number if this table is on the SOA site (rather than constructed), integer}
-\item{series}{Level of government: 1, 2, or 3, for State-local, State, or local, numeric}
 \item{memtype}{Purpose of the table: c("employee", "annuitant", "disabled", "hybrid")}
 \item{collar}{c("allcollars", "blue", "white")}
 \item{sex}{Male or female, c("male", "female", "unisex", "female75"), character}

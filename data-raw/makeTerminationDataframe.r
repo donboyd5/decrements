@@ -1,4 +1,4 @@
-# 5/24/2015
+# 5/28/2015
 
 #****************************************************************************************************
 #                    Termination table rules per 5/23/2015 email from Yimeng ####
@@ -13,47 +13,16 @@
 # - min age and ea is 20, max age and ea is 64.(if we want to set the retirement age r.max greater than 65, the max age and ea should be r.max - 1)
 # - only includes combos with age >= ea
 
-#****************************************************************************************************
-#                    Load packages ####
-#****************************************************************************************************
-
-library(devtools)
-library(plyr) # always load BEFORE loading dplyr
-library(dplyr)
-options(dplyr.print_min = 60) # default is 10
-options(dplyr.print_max = 60) # default is 20
-library(knitr)
-library(lubridate)
-library(ggplot2)
-library(magrittr)
-library(readr)
-library(readxl)
-library(stringr)
-library(tidyr)
-library(xlsx)
-
-
-library(btools)
+# DJB:
+# EVERY age-ea combo must be filled ea 20:64, age 20:64 where age >=ea
 
 
 #****************************************************************************************************
-#                    Constants, directories, etc  ####
+#                    Read Winklevoss term rates  ####
 #****************************************************************************************************
+range <- "A6:J51"
+(term <- readWorksheetFromFile(paste0(dterm, ttfn), sheet="WinklevossTab2-3.Term", header=TRUE, region=range, colTypes="numeric"))
 
-draw <- "./data-raw/"
-dterm <- paste0(draw, "termination/")
-
-wvfn <- "Winklevoss(6).xlsx"
-
-
-#****************************************************************************************************
-#                    Read Winklevoss term rates - Yimeng  ####
-#****************************************************************************************************
-
-# data table 2-3 termination rates ####
-
-# term <- read.xlsx(paste0(draw, wvfn), sheetName = "Tab2-3TermRates", colClasses = "character", startRow = 3, stringsAsFactors = FALSE)
-term <- read_excel(paste0(draw, wvfn), sheet="Tab2-3TermRates", skip=2)
 glimpse(term)
 
 vnames <- c("age", paste0("ea", seq(20, 60, 5)))
@@ -93,18 +62,97 @@ term4 <- term3 %>% mutate(tablename="Winklevoss") %>%
 
 term4 %>% filter(age<ea) # should be no records
 
+saveRDS(term4, paste0(dterm, "term.wv.rds"))
+
+# qplot(age, qxt, data=term4, stat="summary", fun.y = "mean", geom=c("point", "line"))
+count(term4, ea, age) %>% data.frame
+
 
 #****************************************************************************************************
-#                    Read other term rates (TO COME) ####
+#                    AZ-SRS term rates ####
 #****************************************************************************************************
+range <- "B3:D24"
+(df <- readWorksheetFromFile(paste0(dterm, ttfn), sheet="AZ-SRS.Term", header=TRUE, region=range, colTypes="numeric"))
+
+# estimate age, combine male and female, add ages 41-64, and then repeat for all ea 20:64 (where age>=ea)
+df2 <- df %>% mutate(age=yos+20,
+                     qxt=(male + female) / 2) %>%
+  select(age, qxt)
+
+# fill in ages 41+
+df3 <- bind_rows(df2, data.frame(age=41:64)) %>%
+  mutate(age=as.integer(age),
+         qxt=ifelse(age>40, qxt[age==40], qxt)) %>%
+  arrange(age)
+qplot(age, qxt, data=df3, geom=c("point", "line"))
+
+# no missing ages, so spline not necessary
+# df4 <- splong2(df3, "age")
+
+# fatten this up with values for each ea
+df4 <- expand.grid(ea=20:64, age=20:64) %>%
+  filter(age >= ea) %>%
+  left_join(df3) %>%
+  mutate(tablename="az-srs")
+qplot(age, qxt, data=df4, stat="summary", fun.y = "mean", geom=c("point", "line"))
+
+saveRDS(df4, paste0(dterm, "term.az-srs.rds"))
+
+
+#****************************************************************************************************
+#                    PA-PSERS term rates ####
+#****************************************************************************************************
+range <- "A5:E21"
+(df <- readWorksheetFromFile(paste0(dterm, ttfn), sheet="PA-PSERS.Term", header=TRUE, region=range, colTypes="character"))
+
+df2 <- df %>% mutate_each(funs(cton), -sex) %>%
+  mutate(wsum=(nvw + vwlt10 + vw10p) / 100) %>%
+  select(sex, age, wsum) %>%
+  spread(sex, wsum) %>%
+  mutate(qxt=(male + female) / 2) %>%
+  select(age, qxt)
+
+# fill in ages 20, 64
+df3 <- bind_rows(df2, data.frame(age=c(20, 64))) %>%
+  mutate(age=as.integer(age),
+         qxt=ifelse(age==20, qxt[age==25], qxt),
+         qxt=ifelse(age==64, qxt[age==60], qxt)) %>%
+  arrange(age)
+
+qplot(age, qxt, data=df3, geom=c("point", "line"))
+
+# fill in missing ages
+df4 <- splong2(df3, "age")
+qplot(age, qxt, data=df4, geom=c("point", "line"))
+
+# fatten this up with values for each ea
+df5 <- expand.grid(ea=20:64, age=20:64) %>%
+  filter(age >= ea) %>%
+  left_join(df4) %>%
+  mutate(tablename="pa-psers")
+qplot(age, qxt, data=df5, stat="summary", fun.y = "mean", geom=c("point", "line"))
+
+saveRDS(df5, paste0(dterm, "term.pa-psers.rds"))
 
 
 #****************************************************************************************************
 #                    Combine tables and save to data frame ####
 #****************************************************************************************************
 
-termination <- term4
+termlist <- c("term.wv", "term.az-srs", "term.pa-psers")
+
+getterm <- function(tname) readRDS(paste0(dterm, tname, ".rds"))
+
+termination <- ldply(termlist, getterm)
+
+qplot(age, qxt, data=termination, colour=tablename, stat="summary", fun.y = "mean", geom=c("point", "line"))
+
+
 use_data(termination, overwrite=TRUE)
+
+
+qplot(age, qxt, data=termination, colour=tablename, stat="summary", fun.y = "mean", geom=c("point", "line"))
+
 
 
 

@@ -1,4 +1,16 @@
-# 5/22/2015
+# 5/27/2015
+
+# Here's what we want in the final data frame
+# {tablename}{Unique name identifying the mortality table - ordinarily will select on this, character}
+# {SOA unique table number if this table is on the SOA site (rather than constructed), integer}
+# {memtype}{Purpose of the table: c("employee", "annuitant", "disabled", "hybrid")}
+# {collar}{c("allcollars", "blue", "white")}
+# {sex}{Male or female, c("male", "female", "unisex", "female75"), character}
+#       unisex is 50% male, 50% female
+#       female75 is 75% female, 25% male
+# {age}{Attained age, integer}
+# {qxm}{Rate of mortality at age x, numeric}
+
 
 # SOA RP-2000 tables are at:
 # http://www.soa.org/ccm/ content/research-publications/experience-studies-tools/the-rp-2000-mortality-tables/
@@ -13,33 +25,6 @@
 #   series, character:  rp2000,
 #   usage, character: employee, annuitant, hybrid
 #   sex, character: male, female, unisex, female75
-
-
-# packages I always want loaded
-library(plyr) # always load BEFORE loading dplyr
-library(dplyr)
-options(dplyr.print_min = 60) # default is 10
-options(dplyr.print_max = 60) # default is 20
-library(foreign) # various import and export routines - e.g., for reading Stata files
-library(gdata) # for reading spreadsheets
-library(knitr)
-library(lubridate)
-library(ggplot2)
-library(magrittr)
-library(readr)
-library(readxl)
-library(stringr)
-library(tidyr)
-
-library(devtools)
-
-
-# load my packages last
-library(btools)
-# library(pdata)
-
-draw <- "./data-raw/"
-dmort <- paste0(draw, "mortality/")
 
 
 #****************************************************************************************************
@@ -92,12 +77,12 @@ for(tbl in tlist$tid) {
 
 
 #****************************************************************************************************
-#                    Read and combine mortality tables ####
+#                    Read, combine, and save selected SOA mortality tables ####
 #****************************************************************************************************
 # note that tlist from above is needed
 tlist
 
-# make a big data frame
+# make a big data frame of SOA tables
 gettab <- function(fname) {
   df <- read.xlsx(paste0(dmort, fname), sheetIndex = 1)
   names(df)[1:2] <- c("age", "value")
@@ -109,11 +94,12 @@ gettab <- function(fname) {
   return(df2)
 }
 
-dfall <- tlist %>% group_by(tid, series, sex, memtype, collar, year) %>%
+soatabs <- tlist %>% group_by(tid, series, sex, memtype, collar, year) %>%
   do(gettab(.$fname))
 
-glimpse(dfall)
-count(dfall, tid)
+glimpse(soatabs)
+count(soatabs, tid)
+saveRDS(soatabs, paste0(dmort, "soatabs.rds"))
 
 
 #****************************************************************************************************
@@ -121,11 +107,12 @@ count(dfall, tid)
 #****************************************************************************************************
 # make sure hybrid tables run from age 20 to 120
 
+soatabs <- readRDS(paste0(dmort, "soatabs.rds"))
 
 # create hybrid rp2000 table from 1594, 1595, 1597, 1598 into a
 # first combine annuitants / employees within sex
 # then combine sex
-rp2k <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
+rp2k <- soatabs %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
   ungroup %>%
   select(year, sex, age, memtype, value) %>%
   # average annuitant and employee member types
@@ -142,8 +129,10 @@ rp2k <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
          qxm=ifelse(is.na(male), female, ifelse(is.na(female), male, (male + female) / 2))) %>%
   select(-male, -female)
 rp2k %>% data.frame
+saveRDS(rp2k, paste0(dmort, "rp2k.rds"))
 
-rp2k.f75 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
+
+rp2k.f75 <- soatabs %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
   ungroup %>%
   select(year, sex, age, memtype, value) %>%
   # average annuitant and employee member types
@@ -160,9 +149,10 @@ rp2k.f75 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>
          qxm=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.25 + female*.75))) %>%
   select(-male, -female)
 rp2k.f75 %>% data.frame
+saveRDS(rp2k.f75, paste0(dmort, "rp2k.f75.rds"))
 
 
-rp2k.f90 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
+rp2k.f90 <- soatabs %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>%
   ungroup %>%
   select(year, sex, age, memtype, value) %>%
   # average annuitant and employee member types
@@ -179,9 +169,11 @@ rp2k.f90 <- dfall %>% filter(tid %in% c(1594, 1595, 1597, 1598), !is.na(age)) %>
          qxm=ifelse(is.na(male), female, ifelse(is.na(female), male, male*.10 + female*.90))) %>%
   select(-male, -female)
 rp2k.f90 %>% data.frame
+saveRDS(rp2k.f90, paste0(dmort, "rp2k.f90.rds"))
+
 
 # get gam1971
-gam1971base <- dfall %>% filter(tid %in% 818, !is.na(age)) %>%
+gam1971base <- soatabs %>% filter(tid %in% 818, !is.na(age)) %>%
   mutate(tablename="gam1971.hybrid") %>%
   rename(qxm=value)
 # add ages 110-120, with qxm=1
@@ -189,46 +181,77 @@ onerec <- gam1971base %>% filter(age==110) %>% mutate(qxm=1) %>% select(-age)
 stackrecs <- function(x) return(onerec)
 gam1971addon <- data.frame(age=111:120) %>% group_by(age) %>% do(stackrecs(.$age))
 gam1971 <- bind_rows(gam1971base, gam1971addon)
+saveRDS(gam1971, paste0(dmort, "gam1971.rds"))
+
+
+#****************************************************************************************************
+#                    Get RP-2014 tables ####
+#****************************************************************************************************
+# https://www.soa.org/Research/Experience-Study/pension/research-2014-rp.aspx
+# as with RP-2000, combine the employee and healthy annuitant tables
+rp2014fn <- "research-2014-rp-mort-tab-rates-exposure.xlsx"
+range <- "B5:J107" # read entire table and select what we want
+(df <- readWorksheetFromFile(paste0(dmort, rp2014fn), sheet="Total Dataset", header=FALSE, region=range, colTypes="character"))
+names(df) <- c("age", "junk1", "employee.male", "annuitant.male", "disabled.male", "junk2", "employee.female", "annuitant.female", "disabled.female")
+
+wmean <- function(col1, col2, wt1=0.5) {
+  # return the weighted average of col1 and col2 - but if one is missing, use the other
+  # define the possibilities
+  bothmiss <- is.na(col1) & is.na(col2)
+  nomiss <- !(is.na(col1) | is.na(col2))
+  onlymiss1 <- is.na(col1) & !is.na(col2)
+  onlymiss2 <- is.na(col2) & !is.na(col1)
+  vwt1 <- ifelse(nomiss, wt1, ifelse(onlymiss2, 1, 0))
+  vwt2 <- ifelse(nomiss, 1-wt1, ifelse(onlymiss1, 1, 0))
+  naz <- function(vec) ifelse(is.na(vec), 0, vec)
+  wtdcol <- vwt1 * naz(col1) + vwt2 * naz(col2)
+  return(wtdcol)
+}
+
+keepvars <- c("age", "employee.male", "annuitant.male", "employee.female", "annuitant.female")
+rp2014 <- df %>% select(one_of(keepvars)) %>%
+  mutate_each(funs(cton)) %>%
+  mutate(male=wmean(employee.male, annuitant.male),
+         female=wmean(employee.female, annuitant.female),
+         qxm=wmean(male, female)) %>%
+  mutate(tablename="rp2014.hybrid",
+         series="rp2014",
+         year=2014,
+         memtype="hybrid",
+         collar="allcollars",
+         sex="unisex") %>%
+  select(tablename, series, memtype, collar, sex, year, age, qxm)
+
+saveRDS(rp2014, paste0(dmort, "rp2014.rds"))
 
 
 
 #****************************************************************************************************
-#                    Select desired tables and save mortality data frame ####
+#                    Combine tables and save to data frame ####
 #****************************************************************************************************
-# Here's what we want in the final data frame
-# \item{tablename}{Unique name identifying the mortality table - ordinarily will select on this, character}
-# \tid{SOA unique table number if this table is on the SOA site (rather than constructed), integer}
-# \item{series}{Level of government: 1, 2, or 3, for State-local, State, or local, numeric}
-# \item{memtype}{Purpose of the table: c("employee", "annuitant", "disabled", "hybrid")}
-# \item{collar}{c("allcollars", "blue", "white")}
-# \item{sex}{Male or female, c("male", "female", "unisex", "female75"), character}
-#       unisex is 50% male, 50% female
-#       female75 is 75% female, 25% male
-# \item{age}{Attained age, integer}
-# \item{qxm}{Rate of mortality at age x, numeric}
 
+mortlist <- c("gam1971", "rp2k", "rp2k.f75", "rp2k.f90", "rp2014")
 
+getmort <- function(tname) readRDS(paste0(dmort, tname, ".rds"))
 
-glimpse(gam1971)
-glimpse(rp2k)
-mortality <- bind_rows(gam1971, rp2k, rp2k.f75, rp2k.f90) %>%
+mortality <- ldply(mortlist, getmort) %>%
+  # put variables in the desired order
   select(tablename, tid, series, memtype, collar, sex, year, age, qxm) %>%
   arrange(tablename, tid, series, memtype, collar, sex, year, age)
 
-glimpse(mortality)
+use_data(mortality, overwrite=TRUE)
 
-count(mortality, tablename, tid, series, memtype, collar, sex, year)
 
-mortality %>% select(tablename, age, qxm) %>% spread(tablename, qxm) %>% data.frame
-
-qplot(age, qxm, data=filter(mortality, tablename!="gam1971.hybrid"), colour=tablename, geom=c("point", "line"))
-
-mortality %>% filter(age>=20) %>%
+tmp <- mortality %>% filter(age>=20) %>%
   group_by(tablename) %>%
   mutate(cqx=cumprod(1-qxm)) %>%
-  ungroup %>%
-  qplot(age, cqx, data=., colour=tablename, geom=c("point", "line"))
+  ungroup
+qplot(age, cqx, data=tmp, colour=tablename, geom=c("point", "line"), ylab="cqx=cumprod(1-qxm)")
 
 
-use_data(mortality, overwrite=TRUE)
+
+
+
+
+
 
